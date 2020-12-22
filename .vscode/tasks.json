@@ -16,7 +16,7 @@
       "type": "shell",
       "command": "_build/default/main.exe",
       "dependsOn": [
-        "${defaultBuildTask}"
+        "build"
       ],
       "problemMatcher": []
     }
