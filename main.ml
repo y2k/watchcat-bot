@@ -31,16 +31,19 @@ module WatchcatBot = Mk (struct
 
   let command_postfix = Some "watchman"
 
-  let commands =
+  let handleEffect chatId userId e =
     let open Telegram.Actions in
-    let try_ban {chat= {id= chatId; _}; from; _} =
-      match from with
-      | Some {id= userId; _} -> (
-        match Domain.try_ban userId (failwith "???") with
-        | `KickUser user ->
-            kick_chat_member ~chat_id:chatId ~user_id:user
-        | `None ->
-            send_message ~chat_id:chatId "UserID: %i" userId )
+    match e with
+    | `KickUser user ->
+        kick_chat_member ~chat_id:chatId ~user_id:user
+    | `None ->
+        send_message ~chat_id:chatId "UserID: %i" userId
+
+  let commands =
+    let try_ban {chat= {id= chatId; _}; from; reply_to_message; _} =
+      match (from, reply_to_message) with
+      | Some {id= userId; _}, Some {from= Some {id= repl_user_id; _}; _} ->
+          Domain.try_ban userId repl_user_id |> handleEffect chatId userId
       | _ ->
           failwith "???"
     in
