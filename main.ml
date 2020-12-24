@@ -30,8 +30,10 @@ module WatchcatBot = Mk (struct
     in
     effects |> List.map (handleEffect chat_id) |> sequence
 
-  let make_env () =
+  let make_env is_admin =
     object
+      method is_admin = is_admin
+
       method state = !state_store
 
       method now = Unix.time ()
@@ -40,17 +42,33 @@ module WatchcatBot = Mk (struct
   let new_chat_member (chat : Chat.chat) (user : User.user) =
     Domain.new_chat_member (make_env ()) user.id |> handleEffects chat.id
 
+  let is_admin f msg =
+    let open Telegram.Actions in
+    match msg with
+    | {chat= {id= chat_id; _}; from= Some {id= user_id; _}; _} ->
+        let is_member =
+          let open ChatMember in
+          List.exists (fun {user= member; _} -> user_id = member.id)
+        in
+        get_chat_administrators ~chat_id ~and_then:(function
+          | Result.Success members when is_member members ->
+              f msg true
+          | _ ->
+              f msg false)
+    | _ ->
+        nothing
+
   let commands =
-    let wrap f msg = f msg |> handleEffects msg.chat.id in
+    let wrap f =
+      is_admin (fun msg is_admin ->
+          f (make_env is_admin) msg |> handleEffects msg.chat.id)
+    in
     Domain.user_commands
     |> List.map (fun (uc : _ Domain.user_command) ->
            { name= uc.name
            ; description= uc.description
            ; enabled= true
-           ; run=
-               ( if uc.auth then
-                 with_auth ~command:(wrap @@ uc.run (make_env ()))
-               else wrap @@ uc.run (make_env ()) ) })
+           ; run= wrap uc.run })
 end)
 
 let () =
