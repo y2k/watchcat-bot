@@ -16,6 +16,30 @@ module WatchcatBot = Mk (struct
 
   let command_postfix = Some "watchcat"
 
+  let delete_message url ~chat_id ~message_id =
+    let body =
+      `Assoc [("chat_id", `Int chat_id); ("message_id", `Int message_id)]
+      |> Yojson.Safe.to_string
+    in
+    let headers = Cohttp.Header.init_with "Content-Type" "application/json" in
+    let open Lwt.Syntax in
+    let* _, body =
+      Cohttp_lwt_unix.Client.post ~headers
+        ~body:(Cohttp_lwt.Body.of_string body)
+        (Uri.of_string (url ^ "deleteMessage"))
+    in
+    let+ json = Cohttp_lwt.Body.to_string body in
+    let obj = Yojson.Safe.from_string json in
+    let open TelegramUtil in
+    match get_field "ok" obj with
+    | `Bool true ->
+        Result.Success ()
+    | _ ->
+        Result.Failure
+          ( get_field "description" obj
+          |> the_string
+          |> fun x -> print_endline x ; x )
+
   let handleEffects chat_id effects =
     let open Telegram.Actions in
     let handleEffect chat_id effect =
