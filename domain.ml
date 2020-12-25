@@ -3,7 +3,18 @@ module IntSet = Set.Make (Int)
 
 type state = {trusted_users: IntSet.t; users_reg_time: float IntMap.t}
 
-let empty_state = {trusted_users= IntSet.empty; users_reg_time= IntMap.empty}
+module Serializer = struct
+  type event = TrustedUserAdded of int [@@deriving yojson {strict= false}]
+
+  let empty_state = {trusted_users= IntSet.empty; users_reg_time= IntMap.empty}
+
+  let serialize current =
+    IntSet.to_seq current.trusted_users
+    |> Seq.map (fun user -> TrustedUserAdded user)
+
+  let restore state (TrustedUserAdded x) =
+    {state with trusted_users= IntSet.add x state.trusted_users}
+end
 
 let new_chat_member env user_id =
   let state = env#state in

@@ -1,27 +1,33 @@
 open Domain
 open Telegram.Api
 
+let state_store = ref Serializer.empty_state
+
+let save_to_disk =
+  Persistent.save_to_disk "data.json" Domain.Serializer.serialize
+    Domain.Serializer.event_to_yojson
+
 module WatchcatBot = Mk (struct
+  include Telegram.BotDefaults
   open Command
   open Message
-  include Telegram.BotDefaults
 
   let token = Sys.getenv "TELEGRAM_TOKEN"
 
   let command_postfix = Some "watchcat"
-
-  let state_store = ref empty_state
 
   let handleEffects chat_id effects =
     let open Telegram.Actions in
     let handleEffect chat_id effect =
       match effect with
       | `RemoveMessage _message_id ->
+          (* FIXME *)
           nothing
       | `KickUser user ->
           kick_chat_member ~chat_id ~user_id:user
       | `UpdateState state ->
           state_store := state ;
+          save_to_disk state ;
           nothing
       | `SendMessage message ->
           send_message ~chat_id "%s" message
@@ -72,5 +78,8 @@ module WatchcatBot = Mk (struct
 end)
 
 let () =
+  state_store :=
+    Persistent.load Domain.Serializer.restore Domain.Serializer.event_of_yojson
+      Domain.Serializer.empty_state "data.json" ;
   print_endline "Bot started..." ;
   WatchcatBot.run ~log:true ()

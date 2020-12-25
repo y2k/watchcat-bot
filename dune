@@ -1,3 +1,5 @@
 (executable
-  (name main)
-  (libraries telegraml))
+ (name main)
+ (preprocess
+  (pps ppx_deriving_yojson))
+ (libraries telegraml yojson))
