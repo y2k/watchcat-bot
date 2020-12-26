@@ -45,9 +45,9 @@ module WatchcatBot = Mk (struct
       | `DeleteMessage message_id ->
           Lwt.async (fun _ -> delete_message ~chat_id ~message_id) ;
           nothing
-      | `KickUser _user ->
-          (* FIXME *)
-          (* kick_chat_member ~chat_id ~user_id:user *)
+      | `KickUser user_id ->
+          kick_chat_member ~chat_id ~user_id
+          |> ignore;
           nothing
       | `UpdateState state ->
           state_store := state ;
@@ -94,7 +94,10 @@ module WatchcatBot = Mk (struct
   let commands =
     let wrap f =
       is_admin (fun msg is_admin ->
-          f (make_env is_admin msg.from) msg |> handle_effects msg.chat.id)
+          let env = make_env is_admin msg.from in
+          let effs = f env msg in
+          Logger.log env msg.text effs ;
+          effs |> handle_effects msg.chat.id)
     in
     Domain.user_commands
     |> List.map (fun (uc : _ Domain.user_command) ->
