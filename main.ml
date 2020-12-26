@@ -16,7 +16,8 @@ module WatchcatBot = Mk (struct
 
   let command_postfix = Some "watchcat"
 
-  let delete_message url ~chat_id ~message_id =
+  let delete_message ~chat_id ~message_id =
+    let url = "https://api.telegram.org/bot" ^ token ^ "/" in
     let body =
       `Assoc [("chat_id", `Int chat_id); ("message_id", `Int message_id)]
       |> Yojson.Safe.to_string
@@ -33,35 +34,36 @@ module WatchcatBot = Mk (struct
     let open TelegramUtil in
     match get_field "ok" obj with
     | `Bool true ->
-        Result.Success ()
+        ()
     | _ ->
-        Result.Failure
-          ( get_field "description" obj
-          |> the_string
-          |> fun x -> print_endline x ; x )
+        get_field "description" obj |> the_string |> fun x -> print_endline x
 
-  let handleEffects chat_id effects =
+  let handle_effects chat_id effects =
     let open Telegram.Actions in
     let handleEffect chat_id effect =
       match effect with
-      | `RemoveMessage _message_id ->
-          (* FIXME *)
+      | `DeleteMessage message_id ->
+          Lwt.async (fun _ -> delete_message ~chat_id ~message_id) ;
           nothing
-      | `KickUser user ->
-          kick_chat_member ~chat_id ~user_id:user
+      | `KickUser _user ->
+          (* FIXME *)
+          (* kick_chat_member ~chat_id ~user_id:user *)
+          nothing
       | `UpdateState state ->
           state_store := state ;
           save_to_disk state ;
           nothing
       | `SendMessage message ->
-          send_message ~chat_id "%s" message
+          send_message ~chat_id ~disable_notification:true "%s" message
       | `None ->
           nothing
     in
     effects |> List.map (handleEffect chat_id) |> sequence
 
-  let make_env is_admin =
+  let make_env (is_admin : bool) (user : User.user option) =
     object
+      method user = user
+
       method is_admin = is_admin
 
       method state = !state_store
@@ -70,7 +72,8 @@ module WatchcatBot = Mk (struct
     end
 
   let new_chat_member (chat : Chat.chat) (user : User.user) =
-    Domain.new_chat_member (make_env ()) user.id |> handleEffects chat.id
+    Domain.new_chat_member (make_env false (Some user)) user.id
+    |> handle_effects chat.id
 
   let is_admin f msg =
     let open Telegram.Actions in
@@ -91,7 +94,7 @@ module WatchcatBot = Mk (struct
   let commands =
     let wrap f =
       is_admin (fun msg is_admin ->
-          f (make_env is_admin) msg |> handleEffects msg.chat.id)
+          f (make_env is_admin msg.from) msg |> handle_effects msg.chat.id)
     in
     Domain.user_commands
     |> List.map (fun (uc : _ Domain.user_command) ->

@@ -30,3 +30,4 @@ _opam/
 
 # Custom rules
 playground.*
+data.json
