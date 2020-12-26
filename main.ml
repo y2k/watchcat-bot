@@ -46,8 +46,7 @@ module WatchcatBot = Mk (struct
           Lwt.async (fun _ -> delete_message ~chat_id ~message_id) ;
           nothing
       | `KickUser user_id ->
-          kick_chat_member ~chat_id ~user_id
-          |> ignore;
+          kick_chat_member ~chat_id ~user_id |> ignore ;
           nothing
       | `UpdateState state ->
           state_store := state ;
