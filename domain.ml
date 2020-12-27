@@ -41,11 +41,11 @@ let find_user_in_message entities =
          match x.entity_type with TextMention _ -> true | _ -> false)
   |> function Some {entity_type= TextMention user; _} -> Some user | _ -> None
 
-open TelegramApi.Message
-
 let user_to_string {TelegramApi.User.first_name; username; _} =
   Printf.sprintf "%s%s" first_name
     (username |> Option.fold ~none:"" ~some:(fun un -> " (@" ^ un ^ ")"))
+
+open TelegramApi.Message
 
 let add_trusted_user env {chat= {id= chat_id; _}; message_id; entities; _} =
   match env#is_admin with
@@ -92,24 +92,8 @@ let try_ban env ({chat= {id= chat_id; _}; message_id; _} as msg) =
       ; `DeleteMessage message_id ]
     in
     if env#is_admin then delete_spam
-    else if UserMap.mem {chat_id; user_id} state.trusted_users then
-      match IntMap.find_opt spam_user_id state.users_reg_time with
-      | Some reg_date ->
-          let reg_duration = env#now -. reg_date in
-          if reg_duration < 2.0 *. 24.0 *. 3600.0 then delete_spam
-          else
-            [ `SendMessage
-                (Printf.sprintf
-                   {|Недостаточно условий для удаления (%g сек). Обратитесь пожалуйста к администратора.|}
-                   reg_duration) ]
-      | _ ->
-          [ `SendMessage
-              {|Недостаточно условий для удаления. Обратитесь пожалуйста к администратора.|}
-          ]
-    else
-      [ `SendMessage
-          {|Извините, но вас нет в списке доверенных пользователей. Обратитесь пожалуйста к администраторам, что бы вас добавили.|}
-      ]
+    else if UserMap.mem {chat_id; user_id} state.trusted_users then delete_spam
+    else [`DeleteMessage message_id]
   in
   match msg with
   | { from= Some {id= user_id; _}
