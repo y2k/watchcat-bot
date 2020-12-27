@@ -1,5 +1,5 @@
 (executable
  (name main)
  (preprocess
-  (pps ppx_deriving_yojson))
+  (pps ppx_deriving_yojson ppx_compare))
  (libraries telegraml yojson))

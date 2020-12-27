@@ -1,19 +1,30 @@
 module IntMap = Map.Make (Int)
 
-type state = {trusted_users: string IntMap.t; users_reg_time: float IntMap.t}
+type user_key = {chat_id: Int.t; user_id: Int.t} [@@deriving compare]
+
+type user_info = {name: string}
+
+module UserMap = Map.Make (struct
+  type t = user_key [@@deriving compare]
+end)
+
+type state = {trusted_users: user_info UserMap.t; users_reg_time: float IntMap.t}
 
 module Serializer = struct
-  type event = TrustedUserAdded of int * string
+  type event = TrustedUserAdded of {chat_id: int; user_id: int; name: string}
   [@@deriving yojson {strict= false}]
 
-  let empty_state = {trusted_users= IntMap.empty; users_reg_time= IntMap.empty}
+  let empty_state = {trusted_users= UserMap.empty; users_reg_time= IntMap.empty}
 
   let serialize current =
-    IntMap.to_seq current.trusted_users
-    |> Seq.map (fun (id, name) -> TrustedUserAdded (id, name))
+    UserMap.to_seq current.trusted_users
+    |> Seq.map (fun ({chat_id; user_id}, {name}) ->
+           TrustedUserAdded {chat_id; user_id; name})
 
-  let restore state (TrustedUserAdded (id, name)) =
-    {state with trusted_users= IntMap.add id name state.trusted_users}
+  let restore state (TrustedUserAdded {chat_id; user_id; name}) =
+    { state with
+      trusted_users= UserMap.add {chat_id; user_id} {name} state.trusted_users
+    }
 end
 
 let new_chat_member env user_id =
@@ -36,7 +47,7 @@ let user_to_string {TelegramApi.User.first_name; username; _} =
   Printf.sprintf "%s%s" first_name
     (username |> Option.fold ~none:"" ~some:(fun un -> " (@" ^ un ^ ")"))
 
-let add_trusted_user env {message_id; entities; _} =
+let add_trusted_user env {chat= {id= chat_id; _}; message_id; entities; _} =
   match env#is_admin with
   | true -> (
     match find_user_in_message entities with
@@ -45,14 +56,16 @@ let add_trusted_user env {message_id; entities; _} =
         [ `UpdateState
             { state with
               trusted_users=
-                IntMap.add trusted_user.id tu_title state.trusted_users }
+                UserMap.add
+                  {chat_id; user_id= trusted_user.id}
+                  {name= tu_title} state.trusted_users }
         ; `DeleteMessage message_id ]
     | None ->
         [`SendMessage "Пользователь не указан"] )
   | false ->
       []
 
-let remove_trusted_user env {message_id; entities; _} =
+let remove_trusted_user env {chat= {id= chat_id; _}; message_id; entities; _} =
   match env#is_admin with
   | true -> (
     match find_user_in_message entities with
@@ -60,16 +73,18 @@ let remove_trusted_user env {message_id; entities; _} =
         let state = env#state in
         [ `UpdateState
             { state with
-              trusted_users= IntMap.remove trusted_user.id state.trusted_users
-            }
+              trusted_users=
+                UserMap.remove
+                  {chat_id; user_id= trusted_user.id}
+                  state.trusted_users }
         ; `DeleteMessage message_id ]
     | None ->
         [`SendMessage "Пользователь не указан"] )
   | false ->
       []
 
-let try_ban env msg =
-  let try_ban message_id user_id spam_user_id spam_message_id =
+let try_ban env ({chat= {id= chat_id; _}; message_id; _} as msg) =
+  let try_ban user_id spam_user_id spam_message_id =
     let state = env#state
     and delete_spam =
       [ `DeleteMessage spam_message_id
@@ -77,7 +92,7 @@ let try_ban env msg =
       ; `DeleteMessage message_id ]
     in
     if env#is_admin then delete_spam
-    else if IntMap.mem user_id state.trusted_users then
+    else if UserMap.mem {chat_id; user_id} state.trusted_users then
       match IntMap.find_opt spam_user_id state.users_reg_time with
       | Some reg_date ->
           let reg_duration = env#now -. reg_date in
@@ -85,11 +100,11 @@ let try_ban env msg =
           else
             [ `SendMessage
                 (Printf.sprintf
-                   {|Пользователь добавился слишком давно (%g сек).|}
+                   {|Недостаточно условий для удаления (%g сек). Обратитесь пожалуйста к администратора.|}
                    reg_duration) ]
       | _ ->
           [ `SendMessage
-              {|Пользователь добавился слишком давно или ненайден.|}
+              {|Недостаточно условий для удаления. Обратитесь пожалуйста к администратора.|}
           ]
     else
       [ `SendMessage
@@ -97,13 +112,12 @@ let try_ban env msg =
       ]
   in
   match msg with
-  | { message_id
-    ; from= Some {id= user_id; _}
+  | { from= Some {id= user_id; _}
     ; reply_to_message=
         Some {from= Some {id= repl_user_id; _}; message_id= spam_message_id; _}
     ; _ } ->
-      try_ban message_id user_id repl_user_id spam_message_id
-  | {message_id; _} ->
+      try_ban user_id repl_user_id spam_message_id
+  | _ ->
       [`DeleteMessage message_id]
 
 type ('env, 'a) user_command =
