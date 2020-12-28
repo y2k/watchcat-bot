@@ -1,6 +1,6 @@
-FROM ocaml/opam2:alpine-3.11 AS build
+FROM ocaml/opam2:alpine-3.12-ocaml-4.11 AS build
 
-RUN opam switch create 4.11.1 && opam update && opam install dune
+RUN opam update && opam install dune
 
 RUN sudo apk add openssl
 RUN sudo apk add m4
@@ -16,7 +16,7 @@ WORKDIR /app
 
 RUN opam config exec -- dune build
 
-FROM alpine:3.11.7
+FROM alpine:3.12.3
 
 WORKDIR /app
 COPY --from=build /app/_build/default/main.exe .
