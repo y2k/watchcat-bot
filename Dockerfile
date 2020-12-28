@@ -1,6 +1,6 @@
 FROM ocaml/opam2:alpine-3.11 AS build
 
-RUN opam update && opam install dune
+RUN opam switch create 4.11.1 && opam update && opam install dune
 
 RUN sudo apk add openssl
 RUN sudo apk add m4
