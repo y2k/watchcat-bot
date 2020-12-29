@@ -1,4 +1,4 @@
-FROM ocaml/opam2:alpine-3.12-ocaml-4.11 AS build
+FROM ocaml/opam:alpine-3.12-ocaml-4.11 AS build
 
 RUN opam update && opam install dune
 
@@ -6,7 +6,7 @@ RUN sudo apk add openssl
 RUN sudo apk add m4
 
 RUN opam install yojson
-RUN opam install ppx_deriving_yojson
+RUN opam install ppx_deriving_yojson ppx_compare
 
 RUN sudo apk add libressl-dev
 RUN opam install telegraml
