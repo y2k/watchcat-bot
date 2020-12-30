@@ -1,31 +1,20 @@
+open Domain
+
 let user_option_to_string = Option.fold ~none:"" ~some:Domain.user_to_string
 
-let state_diff_to_string old_state new_state =
-  let open Domain in
-  let to_string xs =
-    UserMap.fold
-      (fun k (v : user_info) a ->
-        Printf.sprintf "%s [%s(%i/%i)]" a v.name k.chat_id k.user_id)
-      xs ""
-  in
-  let added =
-    UserMap.fold
-      (fun k _ a -> UserMap.remove k a)
-      old_state.trusted_users new_state.trusted_users
-  and removed =
-    UserMap.fold
-      (fun k _ a -> UserMap.remove k a)
-      new_state.trusted_users old_state.trusted_users
-  in
-  Printf.sprintf "Added: %s, Removed: %s" (to_string added) (to_string removed)
+let state_diff_to_string (events : StateEvents.event list) =
+  events
+  |> List.map StateEvents.event_to_yojson
+  |> (fun xs -> `List xs)
+  |> Yojson.Safe.to_string |> Printf.sprintf "[%s]"
 
-let effect_to_string env = function
+let effect_to_string _env = function
   | `DeleteMessage message_id ->
       Printf.sprintf "RemoveMessage (%i)" message_id
   | `KickUser user_id ->
       Printf.sprintf "KickUser (%i)" user_id
-  | `UpdateState state ->
-      state_diff_to_string env#state state |> Printf.sprintf "UpdateState (%s)"
+  | `UpdateState updates ->
+      state_diff_to_string updates |> Printf.sprintf "UpdateState (%s)"
   | `SendMessage message ->
       Printf.sprintf "SendMessage (%s)" message
   | `None ->

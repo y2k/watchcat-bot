@@ -8,30 +8,25 @@ module UserMap = Map.Make (struct
   type t = user_key [@@deriving compare]
 end)
 
-type state = {trusted_users: user_info UserMap.t; users_reg_time: float IntMap.t}
+type state = {trusted_users: user_info UserMap.t}
 
-module Serializer = struct
-  type event = TrustedUserAdded of {chat_id: int; user_id: int; name: string}
-  [@@deriving yojson {strict= false}]
+module StateEvents = struct
+  type event =
+    | TrustedUserAdded of {chat_id: int; user_id: int; name: string}
+    | TrustedUserDeleted of {chat_id: int; user_id: int}
+  [@@deriving yojson]
 
-  let empty_state = {trusted_users= UserMap.empty; users_reg_time= IntMap.empty}
+  let empty_state = {trusted_users= UserMap.empty}
 
-  let serialize current =
-    UserMap.to_seq current.trusted_users
-    |> Seq.map (fun ({chat_id; user_id}, {name}) ->
-           TrustedUserAdded {chat_id; user_id; name})
-
-  let restore state (TrustedUserAdded {chat_id; user_id; name}) =
-    { state with
-      trusted_users= UserMap.add {chat_id; user_id} {name} state.trusted_users
-    }
+  let restore state = function
+    | TrustedUserAdded {chat_id; user_id; name} ->
+        { trusted_users=
+            UserMap.add {chat_id; user_id} {name} state.trusted_users }
+    | TrustedUserDeleted {chat_id; user_id} ->
+        {trusted_users= UserMap.remove {chat_id; user_id} state.trusted_users}
 end
 
-let new_chat_member env user_id =
-  let state = env#state in
-  [ `UpdateState
-      { state with
-        users_reg_time= IntMap.add user_id env#now state.users_reg_time } ]
+let new_chat_member _env _user_id = []
 
 let find_user_in_message entities =
   let open TelegramApi.MessageEntity in
@@ -52,13 +47,10 @@ let add_trusted_user env {chat= {id= chat_id; _}; message_id; entities; _} =
   | true -> (
     match find_user_in_message entities with
     | Some trusted_user ->
-        let tu_title = user_to_string trusted_user and state = env#state in
+        let tu_title = user_to_string trusted_user in
         [ `UpdateState
-            { state with
-              trusted_users=
-                UserMap.add
-                  {chat_id; user_id= trusted_user.id}
-                  {name= tu_title} state.trusted_users }
+            [ StateEvents.TrustedUserAdded
+                {chat_id; user_id= trusted_user.id; name= tu_title} ]
         ; `DeleteMessage message_id ]
     | None ->
         [`SendMessage "Пользователь не указан"] )
@@ -70,13 +62,8 @@ let remove_trusted_user env {chat= {id= chat_id; _}; message_id; entities; _} =
   | true -> (
     match find_user_in_message entities with
     | Some trusted_user ->
-        let state = env#state in
         [ `UpdateState
-            { state with
-              trusted_users=
-                UserMap.remove
-                  {chat_id; user_id= trusted_user.id}
-                  state.trusted_users }
+            [StateEvents.TrustedUserDeleted {chat_id; user_id= trusted_user.id}]
         ; `DeleteMessage message_id ]
     | None ->
         [`SendMessage "Пользователь не указан"] )
