@@ -12,6 +12,12 @@
       "problemMatcher": []
     },
     {
+      "label": "test",
+      "type": "shell",
+      "command": "dune test",
+      "problemMatcher": []
+    },
+    {
       "label": "run",
       "type": "shell",
       "command": "_build/default/main.exe",

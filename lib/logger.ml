@@ -6,7 +6,7 @@ let state_diff_to_string (events : StateEvents.event list) =
   events
   |> List.map StateEvents.event_to_yojson
   |> (fun xs -> `List xs)
-  |> Yojson.Safe.to_string |> Printf.sprintf "[%s]"
+  |> Yojson.Safe.to_string
 
 let effect_to_string _env = function
   | `DeleteMessage message_id ->
@@ -14,7 +14,7 @@ let effect_to_string _env = function
   | `KickUser user_id ->
       Printf.sprintf "KickUser (%i)" user_id
   | `UpdateState updates ->
-      state_diff_to_string updates |> Printf.sprintf "UpdateState (%s)"
+      state_diff_to_string updates |> Printf.sprintf "UpdateState ([%s])"
   | `SendMessage message ->
       Printf.sprintf "SendMessage (%s)" message
   | `None ->

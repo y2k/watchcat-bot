@@ -106,7 +106,7 @@ module WatchcatBot = Mk (struct
            ; run= wrap uc.run })
 end)
 
-let () =
+let run () =
   state_store :=
     Persistent.load Domain.StateEvents.restore
       Domain.StateEvents.event_of_yojson Domain.StateEvents.empty_state

@@ -55,7 +55,7 @@ let add_trusted_user env {chat= {id= chat_id; _}; message_id; entities; _} =
     | None ->
         [`SendMessage "Пользователь не указан"] )
   | false ->
-      []
+      [`DeleteMessage message_id]
 
 let remove_trusted_user env {chat= {id= chat_id; _}; message_id; entities; _} =
   match env#is_admin with
@@ -68,7 +68,7 @@ let remove_trusted_user env {chat= {id= chat_id; _}; message_id; entities; _} =
     | None ->
         [`SendMessage "Пользователь не указан"] )
   | false ->
-      []
+      [`DeleteMessage message_id]
 
 let try_ban env ({chat= {id= chat_id; _}; message_id; _} as msg) =
   match msg with
