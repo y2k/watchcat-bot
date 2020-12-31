@@ -7,12 +7,13 @@ COPY --chown=opam . /app
 WORKDIR /app
 
 RUN opam config exec -- dune build
+RUN opam config exec -- dune test
 
 FROM alpine:3.12.3
 
 RUN apk add libressl-dev
 
 WORKDIR /app
-COPY --from=build /app/_build/default/main.exe .
+COPY --from=build /app/app/_build/default/main.exe .
 
 ENTRYPOINT [ "./main.exe" ]

@@ -53,7 +53,8 @@ let add_trusted_user env {chat= {id= chat_id; _}; message_id; entities; _} =
                 {chat_id; user_id= trusted_user.id; name= tu_title} ]
         ; `DeleteMessage message_id ]
     | None ->
-        [`SendMessage "Пользователь не указан"] )
+        [ `DeleteMessage message_id
+        ; `SendMessage "Пользователь не указан" ] )
   | false ->
       [`DeleteMessage message_id]
 
@@ -66,7 +67,8 @@ let remove_trusted_user env {chat= {id= chat_id; _}; message_id; entities; _} =
             [StateEvents.TrustedUserDeleted {chat_id; user_id= trusted_user.id}]
         ; `DeleteMessage message_id ]
     | None ->
-        [`SendMessage "Пользователь не указан"] )
+        [ `DeleteMessage message_id
+        ; `SendMessage "Пользователь не указан" ] )
   | false ->
       [`DeleteMessage message_id]
 
