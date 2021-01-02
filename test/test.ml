@@ -1,17 +1,38 @@
 open Lib.Domain
 open TelegramApi
 
-let%test "call try_ban by trusted user" =
-  try_ban
-    (object
-       method is_admin = false
+type ('f, 'eff) env =
+  { func: 'f -> Message.message -> 'eff list
+  ; is_admin: bool
+  ; state: state
+  ; mention_user_id: int option }
 
-       method state =
-         { trusted_users=
-             UserMap.singleton {chat_id= 500; user_id= 400} {name= ""} }
+let empty_env =
+  { func= (fun _ _ -> [])
+  ; is_admin= false
+  ; state= {trusted_users= UserMap.empty}
+  ; mention_user_id= None }
+
+let run_test env expected =
+  env.func
+    (object
+       method is_admin = env.is_admin
+
+       method state = env.state
     end)
     (Message.create ~message_id:100 ~date:0
        ~from:(Some (User.create ~id:400 ~first_name:"" ()))
+       ~entities:
+         ( match env.mention_user_id with
+         | Some user_id ->
+             Some
+               [ MessageEntity.create
+                   ~entity_type:
+                     (TextMention
+                        (User.create ~id:user_id ~first_name:"mention_user" ()))
+                   ~offset:0 ~length:0 () ]
+         | None ->
+             None )
        ~reply_to:
          (Some
             (Message.create ~message_id:200 ~date:0
@@ -20,114 +41,59 @@ let%test "call try_ban by trusted user" =
                ()))
        ~chat:(Chat.create ~id:500 ~chat_type:Chat.Supergroup ())
        ())
-  = [`DeleteMessage 200; `KickUser 300; `DeleteMessage 100]
+  = expected
+
+let%test "call try_ban by trusted user" =
+  run_test
+    { empty_env with
+      func= try_ban
+    ; state=
+        { trusted_users=
+            UserMap.singleton {chat_id= 500; user_id= 400} {name= ""} } }
+    [`DeleteMessage 200; `KickUser 300; `DeleteMessage 100]
 
 let%test "call try_ban by admin" =
-  try_ban
-    (object
-       method is_admin = true
-
-       method state = {trusted_users= UserMap.empty}
-    end)
-    (Message.create ~message_id:100 ~date:0
-       ~from:(Some (User.create ~id:400 ~first_name:"" ()))
-       ~reply_to:
-         (Some
-            (Message.create ~message_id:200 ~date:0
-               ~from:(Some (User.create ~id:300 ~first_name:"" ()))
-               ~chat:(Chat.create ~id:500 ~chat_type:Chat.Supergroup ())
-               ()))
-       ~chat:(Chat.create ~id:500 ~chat_type:Chat.Supergroup ())
-       ())
-  = [`DeleteMessage 200; `KickUser 300; `DeleteMessage 100]
+  run_test
+    {empty_env with func= try_ban; is_admin= true}
+    [`DeleteMessage 200; `KickUser 300; `DeleteMessage 100]
 
 let%test "call try_ban with no permission" =
-  try_ban
-    (object
-       method is_admin = false
-
-       method state = {trusted_users= UserMap.empty}
-    end)
-    (Message.create ~message_id:42 ~date:0
-       ~chat:(Chat.create ~id:0 ~chat_type:Chat.Supergroup ())
-       ())
-  = [`DeleteMessage 42]
+  run_test {empty_env with func= try_ban} [`DeleteMessage 100]
 
 let%test "add_trusted_user not admin" =
-  add_trusted_user
-    (object
-       method is_admin = false
-    end)
-    (Message.create ~message_id:42 ~date:0
-       ~chat:(Chat.create ~id:0 ~chat_type:Chat.Supergroup ())
-       ())
-  = [`DeleteMessage 42]
+  run_test {empty_env with func= add_trusted_user} [`DeleteMessage 100]
 
 let%test "add_trusted_user no reply" =
-  add_trusted_user
-    (object
-       method is_admin = true
-    end)
-    (Message.create ~message_id:42 ~date:0
-       ~chat:(Chat.create ~id:0 ~chat_type:Chat.Supergroup ())
-       ())
-  = [ `DeleteMessage 42
+  run_test
+    {empty_env with func= add_trusted_user; is_admin= true}
+    [ `DeleteMessage 100
     ; `SendMessage "Пользователь не указан" ]
 
 let%test "add_trusted_user" =
-  add_trusted_user
-    (object
-       method is_admin = true
-    end)
-    (Message.create
-       ~entities:
-         (Some
-            [ MessageEntity.create
-                ~entity_type:
-                  (TextMention (User.create ~id:200 ~first_name:"user" ()))
-                ~offset:0 ~length:0 () ])
-       ~message_id:42 ~date:0
-       ~chat:(Chat.create ~id:100 ~chat_type:Chat.Supergroup ())
-       ())
-  = [ `UpdateState
-        [StateEvents.TrustedUserAdded {chat_id= 100; user_id= 200; name= "user"}]
-    ; `DeleteMessage 42 ]
+  run_test
+    { empty_env with
+      func= add_trusted_user
+    ; is_admin= true
+    ; mention_user_id= Some 200 }
+    [ `UpdateState
+        [ StateEvents.TrustedUserAdded
+            {chat_id= 500; user_id= 200; name= "mention_user"} ]
+    ; `DeleteMessage 100 ]
 
 let%test "remove_trusted_user not admin" =
-  remove_trusted_user
-    (object
-       method is_admin = false
-    end)
-    (Message.create ~message_id:42 ~date:0
-       ~chat:(Chat.create ~id:0 ~chat_type:Chat.Supergroup ())
-       ())
-  = [`DeleteMessage 42]
+  run_test {empty_env with func= remove_trusted_user} [`DeleteMessage 100]
 
 let%test "remove_trusted_user no reply" =
-  remove_trusted_user
-    (object
-       method is_admin = true
-    end)
-    (Message.create ~message_id:42 ~date:0
-       ~chat:(Chat.create ~id:0 ~chat_type:Chat.Supergroup ())
-       ())
-  = [ `DeleteMessage 42
+  run_test
+    {empty_env with func= remove_trusted_user; is_admin= true}
+    [ `DeleteMessage 100
     ; `SendMessage "Пользователь не указан" ]
 
 let%test "remove_trusted_user" =
-  remove_trusted_user
-    (object
-       method is_admin = true
-    end)
-    (Message.create
-       ~entities:
-         (Some
-            [ MessageEntity.create
-                ~entity_type:
-                  (TextMention (User.create ~id:200 ~first_name:"user" ()))
-                ~offset:0 ~length:0 () ])
-       ~message_id:42 ~date:0
-       ~chat:(Chat.create ~id:100 ~chat_type:Chat.Supergroup ())
-       ())
-  = [ `UpdateState [StateEvents.TrustedUserDeleted {chat_id= 100; user_id= 200}]
-    ; `DeleteMessage 42 ]
+  run_test
+    { empty_env with
+      func= remove_trusted_user
+    ; mention_user_id= Some 200
+    ; is_admin= true }
+    [ `UpdateState [StateEvents.TrustedUserDeleted {chat_id= 500; user_id= 200}]
+    ; `DeleteMessage 100 ]
