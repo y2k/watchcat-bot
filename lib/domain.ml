@@ -72,24 +72,30 @@ let remove_trusted_user env {chat= {id= chat_id; _}; message_id; entities; _} =
   | false ->
       [`DeleteMessage message_id]
 
-let try_ban env ({chat= {id= chat_id; _}; message_id; _} as msg) =
+let try_ban env msg =
   match msg with
   | { from= Some {id= user_id; _}
     ; reply_to_message=
-        Some {from= Some {id= spam_user_id; _}; message_id= spam_message_id; _}
+        Some
+          { from= Some {id= spam_user_id; _}
+          ; message_id= spam_message_id
+          ; date= spam_date
+          ; _ }
     ; _ } ->
       let state = env#state
       and delete_spam =
         [ `DeleteMessage spam_message_id
         ; `KickUser spam_user_id
-        ; `DeleteMessage message_id ]
+        ; `DeleteMessage msg.message_id ]
       in
       if env#is_admin then delete_spam
-      else if UserMap.mem {chat_id; user_id} state.trusted_users then
-        delete_spam
-      else [`DeleteMessage message_id]
+      else if
+        UserMap.mem {chat_id= msg.chat.id; user_id} state.trusted_users
+        && msg.date - spam_date <= 60
+      then delete_spam
+      else [`DeleteMessage msg.message_id]
   | _ ->
-      [`DeleteMessage message_id]
+      [`DeleteMessage msg.message_id]
 
 type ('env, 'a) user_command =
   {name: string; description: string; run: 'env -> message -> 'a}

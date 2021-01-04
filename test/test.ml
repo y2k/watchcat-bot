@@ -5,13 +5,15 @@ type ('f, 'eff) env =
   { func: 'f -> Message.message -> 'eff list
   ; is_admin: bool
   ; state: state
-  ; mention_user_id: int option }
+  ; mention_user_id: int option
+  ; message_date: int }
 
 let empty_env =
   { func= (fun _ _ -> [])
   ; is_admin= false
   ; state= {trusted_users= UserMap.empty}
-  ; mention_user_id= None }
+  ; mention_user_id= None
+  ; message_date= 0 }
 
 let run_test env expected =
   env.func
@@ -20,7 +22,7 @@ let run_test env expected =
 
        method state = env.state
     end)
-    (Message.create ~message_id:100 ~date:0
+    (Message.create ~message_id:100 ~date:env.message_date
        ~from:(Some (User.create ~id:400 ~first_name:"" ()))
        ~entities:
          ( match env.mention_user_id with
@@ -43,10 +45,21 @@ let run_test env expected =
        ())
   = expected
 
+let%test "call try_ban by trusted user to late" =
+  run_test
+    { empty_env with
+      func= try_ban
+    ; message_date= 61
+    ; state=
+        { trusted_users=
+            UserMap.singleton {chat_id= 500; user_id= 400} {name= ""} } }
+    [`DeleteMessage 100]
+
 let%test "call try_ban by trusted user" =
   run_test
     { empty_env with
       func= try_ban
+    ; message_date= 60
     ; state=
         { trusted_users=
             UserMap.singleton {chat_id= 500; user_id= 400} {name= ""} } }
