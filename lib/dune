@@ -2,4 +2,4 @@
  (name lib)
  (preprocess
   (pps ppx_deriving_yojson ppx_compare))
- (libraries telegraml yojson))
+ (libraries y2k-telegraml yojson))

@@ -1,7 +1,8 @@
 FROM ocaml/opam:alpine-3.12-ocaml-4.11 AS build
 
 RUN sudo apk add openssl m4 libressl-dev
-RUN opam update && opam install dune yojson ppx_deriving_yojson ppx_compare telegraml
+RUN opam update && opam install dune yojson ppx_deriving_yojson ppx_compare
+RUN opam repository add y2k git://github.com/y2k/opam && opam install y2k-telegraml
 
 COPY --chown=opam . /app
 WORKDIR /app

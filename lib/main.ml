@@ -75,7 +75,7 @@ module WatchcatBot = Mk (struct
 
   let is_admin f msg =
     let open Telegram.Actions in
-    match msg with
+    ( match msg with
     | {chat= {id= chat_id; _}; from= Some {id= user_id; _}; _} ->
         let is_member =
           let open ChatMember in
@@ -87,7 +87,8 @@ module WatchcatBot = Mk (struct
           | _ ->
               f msg false)
     | _ ->
-        nothing
+        nothing )
+    |> Lwt.return
 
   let commands =
     let wrap f =
