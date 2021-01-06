@@ -15,35 +15,12 @@ module WatchcatBot = Mk (struct
 
   let command_postfix = Some "watchcat"
 
-  let delete_message ~chat_id ~message_id =
-    let url = "https://api.telegram.org/bot" ^ token ^ "/" in
-    let body =
-      `Assoc [("chat_id", `Int chat_id); ("message_id", `Int message_id)]
-      |> Yojson.Safe.to_string
-    in
-    let headers = Cohttp.Header.init_with "Content-Type" "application/json" in
-    let open Lwt.Syntax in
-    let* _, body =
-      Cohttp_lwt_unix.Client.post ~headers
-        ~body:(Cohttp_lwt.Body.of_string body)
-        (Uri.of_string (url ^ "deleteMessage"))
-    in
-    let+ json = Cohttp_lwt.Body.to_string body in
-    let obj = Yojson.Safe.from_string json in
-    let open TelegramUtil in
-    match get_field "ok" obj with
-    | `Bool true ->
-        ()
-    | _ ->
-        get_field "description" obj |> the_string |> fun x -> print_endline x
-
   let handle_effects chat_id effects =
     let open Telegram.Actions in
     let handleEffect chat_id effect =
       match effect with
       | `DeleteMessage message_id ->
-          Lwt.async (fun _ -> delete_message ~chat_id ~message_id) ;
-          nothing
+          delete_message ~chat_id ~message_id
       | `KickUser user_id ->
           kick_chat_member ~chat_id ~user_id
       | `UpdateState events ->
