@@ -36,8 +36,7 @@ let log env text reply_text effs =
   Printf.sprintf
     "LOG: %s, is_admin=%b\n  REQUEST: %s\n  REPLAY_TEXT: %s\n  EFFECTS: [%s]"
     (user_option_to_string env#user)
-    env#is_admin
-    (text |> Option.fold ~none:"" ~some:Fun.id)
+    env#is_admin text
     (reply_text |> Option.fold ~none:"" ~some:Fun.id)
     log_message
   |> print_endline

@@ -90,13 +90,19 @@ module WatchcatBot = Mk (struct
         nothing )
     |> Lwt.return
 
+  let last_json = ref ""
+
+  let hook_update json data =
+    last_json := json ;
+    data
+
   let commands =
     let wrap f =
       is_admin (fun msg is_admin ->
           let env = make_env is_admin msg.from in
           let effs = f env msg in
           let reply_text = Option.bind msg.reply_to_message (fun x -> x.text) in
-          Logger.log env msg.text reply_text effs ;
+          Logger.log env !last_json reply_text effs ;
           effs |> handle_effects msg.chat.id)
     in
     Domain.user_commands
