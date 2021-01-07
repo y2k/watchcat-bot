@@ -37,7 +37,7 @@ let run_test env expected =
              None )
        ~reply_to:
          (Some
-            (Message.create ~message_id:200 ~date:0
+            (Message.create ~message_id:200 ~date:0 ~photo:(Some [])
                ~from:(Some (User.create ~id:300 ~first_name:"" ()))
                ~chat:(Chat.create ~id:500 ~chat_type:Chat.Supergroup ())
                ()))
@@ -49,7 +49,7 @@ let%test "call try_ban by trusted user to late" =
   run_test
     { empty_env with
       func= try_ban
-    ; message_date= 61
+    ; message_date= 91
     ; state=
         { trusted_users=
             UserMap.singleton {chat_id= 500; user_id= 400} {name= ""} } }
@@ -59,7 +59,7 @@ let%test "call try_ban by trusted user" =
   run_test
     { empty_env with
       func= try_ban
-    ; message_date= 60
+    ; message_date= 90
     ; state=
         { trusted_users=
             UserMap.singleton {chat_id= 500; user_id= 400} {name= ""} } }

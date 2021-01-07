@@ -42,8 +42,6 @@ module WatchcatBot = Mk (struct
       method is_admin = is_admin
 
       method state = !state_store
-
-      method now = Unix.time ()
     end
 
   let new_chat_member (chat : Chat.chat) (user : User.user) =
