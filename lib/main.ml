@@ -1,15 +1,22 @@
 open Domain
 open Telegram.Api
 
-let state_store = ref StateEvents.empty_state
-
-let save_to_disk =
-  Persistent.save_to_disk "data.json" StateEvents.event_to_yojson
-
-module WatchcatBot = Mk (struct
+module MakeWatchcatBot (Env : sig
+  val storage_path : string
+end) =
+Mk (struct
   include Telegram.BotDefaults
   open Command
   open Message
+
+  let state_store =
+    ref
+      (Persistent.load Domain.StateEvents.restore
+         Domain.StateEvents.event_of_yojson Domain.StateEvents.empty_state
+         Env.storage_path)
+
+  let save_to_disk =
+    Persistent.save_to_disk Env.storage_path StateEvents.event_to_yojson
 
   let token = Sys.getenv "TELEGRAM_TOKEN"
 
@@ -89,9 +96,8 @@ module WatchcatBot = Mk (struct
 end)
 
 let run () =
-  state_store :=
-    Persistent.load Domain.StateEvents.restore
-      Domain.StateEvents.event_of_yojson Domain.StateEvents.empty_state
-      "data.json" ;
+  let module WatchcatBot = MakeWatchcatBot (struct
+    let storage_path = Sys.argv.(1)
+  end) in
   print_endline "Bot started..." ;
   WatchcatBot.run ~log:true ()
