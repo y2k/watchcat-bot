@@ -105,7 +105,7 @@ type ('env, 'a) user_command =
   {name: string; description: string; run: 'env -> message -> 'a}
 
 let user_commands =
-  [ { name= "baka"
+  [ { name= "ban"
     ; description= "Забанить пользователя"
     ; run= try_ban }
   ; { name= "add"
