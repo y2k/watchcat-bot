@@ -28,7 +28,7 @@ end
 
 let new_chat_member _env _user_id = []
 
-let find_user_in_message entities =
+let find_user_in_message' entities =
   let open TelegramApi.MessageEntity in
   entities
   |> Option.fold ~none:[] ~some:Fun.id
@@ -36,16 +36,23 @@ let find_user_in_message entities =
          match x.entity_type with TextMention _ -> true | _ -> false)
   |> function Some {entity_type= TextMention user; _} -> Some user | _ -> None
 
+open TelegramApi.Message
+
+let find_user_in_message msg =
+  match msg with
+  | {reply_to_message= Some {from= Some user; _}; _} ->
+      Some user
+  | _ ->
+      find_user_in_message' msg.entities
+
 let user_to_string {TelegramApi.User.first_name; username; _} =
   Printf.sprintf "%s%s" first_name
     (username |> Option.fold ~none:"" ~some:(fun un -> " (@" ^ un ^ ")"))
 
-open TelegramApi.Message
-
-let add_trusted_user env {chat= {id= chat_id; _}; message_id; entities; _} =
+let add_trusted_user env ({chat= {id= chat_id; _}; message_id; _} as msg) =
   match env#is_admin with
   | true -> (
-    match find_user_in_message entities with
+    match find_user_in_message msg with
     | Some trusted_user ->
         let tu_title = user_to_string trusted_user in
         [ `UpdateState
@@ -58,10 +65,10 @@ let add_trusted_user env {chat= {id= chat_id; _}; message_id; entities; _} =
   | false ->
       [`DeleteMessage message_id]
 
-let remove_trusted_user env {chat= {id= chat_id; _}; message_id; entities; _} =
+let remove_trusted_user env ({chat= {id= chat_id; _}; message_id; _} as msg) =
   match env#is_admin with
   | true -> (
-    match find_user_in_message entities with
+    match find_user_in_message msg with
     | Some trusted_user ->
         [ `UpdateState
             [StateEvents.TrustedUserDeleted {chat_id; user_id= trusted_user.id}]

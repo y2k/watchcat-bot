@@ -9,14 +9,17 @@ Mk (struct
   open Command
   open Message
 
+  let init_events =
+    Persistent.load_events Domain.StateEvents.event_of_yojson Env.storage_path
+
   let state_store =
     ref
-      (Persistent.load Domain.StateEvents.restore
-         Domain.StateEvents.event_of_yojson Domain.StateEvents.empty_state
-         Env.storage_path)
+      (Persistent.restore_from_events Domain.StateEvents.restore
+         Domain.StateEvents.empty_state init_events)
 
   let save_to_disk =
-    Persistent.save_to_disk Env.storage_path StateEvents.event_to_yojson
+    Persistent.save_to_disk init_events Env.storage_path
+      StateEvents.event_to_yojson
 
   let token = Sys.getenv "TELEGRAM_TOKEN"
 
