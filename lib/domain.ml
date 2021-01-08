@@ -108,6 +108,10 @@ let user_commands =
   [ { name= "ban"
     ; description= "Забанить пользователя"
     ; run= try_ban }
+  ; { name= "baka"
+    ; description=
+        "Забанить пользователя (синоним ban)"
+    ; run= try_ban }
   ; { name= "add"
     ; description=
         "Добавить доверенного пользователя"
