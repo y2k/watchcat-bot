@@ -21,10 +21,6 @@ Mk (struct
     Persistent.save_to_disk init_events Env.storage_path
       StateEvents.event_to_yojson
 
-  let token = Sys.getenv "TELEGRAM_TOKEN"
-
-  let command_postfix = Some "watchcat"
-
   let handle_effects chat_id effects =
     let open Telegram.Actions in
     let handleEffect chat_id effect =
@@ -44,6 +40,10 @@ Mk (struct
           nothing
     in
     effects |> List.map (handleEffect chat_id) |> sequence
+
+  let token = Sys.getenv "TELEGRAM_TOKEN"
+
+  let command_postfix = Some "watchcat"
 
   let make_env (is_admin : bool) (user : User.user option) =
     object

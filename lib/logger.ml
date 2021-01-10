@@ -17,8 +17,6 @@ let effect_to_string _env = function
       state_diff_to_string updates |> Printf.sprintf "UpdateState ([%s])"
   | `SendMessage message ->
       Printf.sprintf "SendMessage (%s)" message
-  | `None ->
-      "None"
 
 let effects_to_string env = function
   | [] ->
