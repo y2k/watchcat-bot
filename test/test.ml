@@ -6,14 +6,16 @@ type ('f, 'eff) env =
   ; is_admin: bool
   ; state: state
   ; mention_user_id: int option
-  ; message_date: int }
+  ; message_date: int
+  ; is_reply: bool }
 
 let empty_env =
   { func= (fun _ _ -> [])
   ; is_admin= false
   ; state= {trusted_users= UserMap.empty}
   ; mention_user_id= None
-  ; message_date= 0 }
+  ; message_date= 0
+  ; is_reply= false }
 
 let run_test env expected =
   env.func
@@ -36,11 +38,13 @@ let run_test env expected =
          | None ->
              None )
        ~reply_to:
-         (Some
-            (Message.create ~message_id:200 ~date:0 ~photo:(Some [])
-               ~from:(Some (User.create ~id:300 ~first_name:"" ()))
-               ~chat:(Chat.create ~id:500 ~chat_type:Chat.Supergroup ())
-               ()))
+         ( if env.is_reply then
+           Some
+             (Message.create ~message_id:200 ~date:0 ~photo:(Some [])
+                ~from:(Some (User.create ~id:300 ~first_name:"" ()))
+                ~chat:(Chat.create ~id:500 ~chat_type:Chat.Supergroup ())
+                ())
+         else None )
        ~chat:(Chat.create ~id:500 ~chat_type:Chat.Supergroup ())
        ())
   = expected
@@ -59,6 +63,7 @@ let%test "call try_ban by trusted user" =
   run_test
     { empty_env with
       func= try_ban
+    ; is_reply= true
     ; message_date= 90
     ; state=
         { trusted_users=
@@ -67,7 +72,7 @@ let%test "call try_ban by trusted user" =
 
 let%test "call try_ban by admin" =
   run_test
-    {empty_env with func= try_ban; is_admin= true}
+    {empty_env with func= try_ban; is_admin= true; is_reply= true}
     [`DeleteMessage 200; `KickUser 300; `DeleteMessage 100]
 
 let%test "call try_ban with no permission" =
