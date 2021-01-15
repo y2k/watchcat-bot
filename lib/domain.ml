@@ -80,6 +80,13 @@ let remove_trusted_user env ({chat= {id= chat_id; _}; message_id; _} as msg) =
       [`DeleteMessage message_id]
 
 let try_ban env msg =
+  let is_spam spam_msg =
+    let jc_regex = Str.regexp "https://t\\.me/joinchat/.+" in
+    (Option.is_none spam_msg.text && Option.is_some spam_msg.photo)
+    || Str.string_match jc_regex
+         (spam_msg.text |> Option.fold ~none:"" ~some:Fun.id)
+         0
+  in
   match msg with
   | { from= Some {id= user_id; _}
     ; reply_to_message= Some ({from= Some {id= spam_user_id; _}; _} as spam_msg)
@@ -94,8 +101,7 @@ let try_ban env msg =
       else if
         UserMap.mem {chat_id= msg.chat.id; user_id} state.trusted_users
         && msg.date - spam_msg.date <= 90
-        && Option.is_none spam_msg.text
-        && Option.is_some spam_msg.photo
+        && is_spam spam_msg
       then delete_spam
       else [`DeleteMessage msg.message_id]
   | _ ->

@@ -25,60 +25,27 @@ let handle_command (env : _ env) json =
     (let msg = Yojson.Safe.from_string json in
      Message.read msg)
 
-let%test "call try_ban by trusted user to late" =
+let asset_ban_message message_json =
   let json =
-    {|{
-      "message_id": 3273,
-      "from": {
-        "id": 241854720,
-        "is_bot": false,
-        "first_name": "Igor",
-        "username": "angmarr",
-        "language_code": "en"
-      },
-      "chat": {
-        "id": 241854720,
-        "first_name": "Igor",
-        "username": "angmarr",
-        "type": "private"
-      },
-      "date": 1610705347,
-      "reply_to_message": {
-        "message_id": 3270,
-        "from": {
-          "id": 241854720,
-          "is_bot": false,
-          "first_name": "Igor",
-          "username": "angmarr",
-          "language_code": "en"
-        },
-        "chat": {
-          "id": 241854720,
-          "first_name": "Igor",
-          "username": "angmarr",
-          "type": "private"
-        },
-        "date": 1610705269,
-        "text": "https://t.me/joinchat/TyToURiKpfFB_ggN",
-        "entities": [
-          {
-            "offset": 0,
-            "length": 38,
-            "type": "url"
-          }
-        ]
-      },
-      "text": "/baka",
-      "entities": [
-        {
-          "offset": 0,
-          "length": 5,
-          "type": "bot_command"
-        }
-      ]
-    }|}
+    {|{"message_id":100,"from":{"id":400,"is_bot":false,"first_name":"Igor","username":"angmarr","language_code":"en"},"chat":{"id":400,"first_name":"Igor","username":"angmarr","type":"private"},"date":0,"reply_to_message":|}
+    ^ message_json
+    ^ {|,"text":"/baka","entities":[{"offset":0,"length":5,"type":"bot_command"}]}|}
   in
   let actual =
-    handle_command {empty_env with func= try_ban; is_admin= true} json
+    handle_command
+      { empty_env with
+        func= try_ban
+      ; state=
+          { trusted_users=
+              UserMap.singleton {chat_id= 400; user_id= 400} {name= ""} } }
+      json
   in
   actual = [`DeleteMessage 200; `KickUser 300; `DeleteMessage 100]
+
+let%test "new test by JSON 2" =
+  asset_ban_message
+    {|{"message_id":200,"from":{"id":300,"is_bot":false,"first_name":"Igor","username":"angmarr","language_code":"en"},"chat":{"id":400,"first_name":"Igor","username":"angmarr","type":"private"},"date":0,"forward_from_chat":{"id":-1001218991791,"title":"Callum Law","type":"channel"},"forward_from_message_id":3,"forward_date":1610520008,"text":"https://t.me/joinchat/S5UjklG2Tx69tG8z","entities":[{"offset":0,"length":38,"type":"url"}]}|}
+
+let%test "new test by JSON" =
+  asset_ban_message
+    {|{"message_id":200,"from":{"id":300,"is_bot":false,"first_name":"Igor","username":"angmarr","language_code":"en"},"chat":{"id":400,"first_name":"Igor","username":"angmarr","type":"private"},"date":0,"text":"https://t.me/joinchat/TyToURiKpfFB_ggN","entities":[{"offset":0,"length":38,"type":"url"}]}|}
