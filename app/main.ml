@@ -1,1 +1,1 @@
-let () = Lib.Main.run ()
+let () = Lib.Main.run Sys.argv.(1)

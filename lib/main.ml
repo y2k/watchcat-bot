@@ -98,9 +98,9 @@ Mk (struct
            ; run= wrap uc.run })
 end)
 
-let run () =
+let run storage_path =
   let module WatchcatBot = MakeWatchcatBot (struct
-    let storage_path = Sys.argv.(1)
+    let storage_path = storage_path
   end) in
   print_endline "Bot started..." ;
   WatchcatBot.run ~log:true ()
