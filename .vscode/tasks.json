@@ -21,7 +21,7 @@
       "label": "run",
       "type": "shell",
       "command": "_build/default/app/main.exe",
-      "args": [ "${workspaceFolder}/data/data.json" ],
+      "args": [ "${workspaceFolder}/_build/data.json" ],
       "dependsOn": [
         "build"
       ],
