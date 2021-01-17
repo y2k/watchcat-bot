@@ -125,4 +125,5 @@ let user_commands =
   ; { name= "remove"
     ; description=
         "Удалить доверенного пользователя"
-    ; run= remove_trusted_user } ]
+    ; run= remove_trusted_user }
+  ; {name= "version"; description= "Версия 0.1"; run= (fun _ _ -> [])} ]
