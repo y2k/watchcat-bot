@@ -43,7 +43,7 @@ Mk (struct
 
   let token = Sys.getenv "TELEGRAM_TOKEN"
 
-  let command_postfix = Some "watchcat"
+  let command_postfix = Some "watchcat_y2k_bot"
 
   let make_env (is_admin : bool) (user : User.user option) =
     object
