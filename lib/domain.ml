@@ -82,8 +82,12 @@ let remove_trusted_user env ({chat= {id= chat_id; _}; message_id; _} as msg) =
 let try_ban env msg =
   let is_spam reply_msg =
     let jc_regex = Str.regexp "https://t\\.me/joinchat/.+" in
+    let bit_regex = Str.regexp ".*https://bit\\.ly/.+" in
     (Option.is_none reply_msg.text && Option.is_some reply_msg.photo)
     || Str.string_match jc_regex
+         (reply_msg.text |> Option.fold ~none:"" ~some:Fun.id)
+         0
+    || Str.string_match bit_regex
          (reply_msg.text |> Option.fold ~none:"" ~some:Fun.id)
          0
   in
