@@ -15,9 +15,11 @@ RUN opam config exec -- dune test
 
 FROM alpine:3.12.3
 
+ENV OCAMLRUNPARAM=b
+
 RUN apk add libressl-dev
 
 WORKDIR /app
 COPY --from=build /app/_build/default/app/main.exe .
 
-ENTRYPOINT [ "export OCAMLRUNPARAM=b && ./main.exe" ]
+ENTRYPOINT [ "./main.exe" ]
