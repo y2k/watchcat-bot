@@ -6,6 +6,7 @@ RUN opam update && opam install dune yojson ppx_deriving_yojson ppx_compare ppx_
 RUN opam repository add y2k git://github.com/y2k/opam && opam install y2k-telegraml
 
 COPY --chown=opam dune-project /app/dune-project
+COPY --chown=opam dune /app/dune
 COPY --chown=opam app/dune /app/app/
 COPY --chown=opam app/*.ml /app/app/
 COPY --chown=opam lib/dune /app/lib/
