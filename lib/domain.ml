@@ -33,7 +33,7 @@ let find_user_in_message' entities =
   entities
   |> Option.fold ~none:[] ~some:Fun.id
   |> List.find_opt (fun x ->
-         match x.entity_type with TextMention _ -> true | _ -> false)
+         match x.entity_type with TextMention _ -> true | _ -> false )
   |> function Some {entity_type= TextMention user; _} -> Some user | _ -> None
 
 open TelegramApi.Message

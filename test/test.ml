@@ -23,7 +23,7 @@ let run_test env expected =
        method is_admin = env.is_admin
 
        method state = env.state
-    end)
+    end )
     (Message.create ~message_id:100 ~date:env.message_date
        ~from:(Some (User.create ~id:400 ~first_name:"" ()))
        ~entities:
@@ -33,7 +33,8 @@ let run_test env expected =
                [ MessageEntity.create
                    ~entity_type:
                      (TextMention
-                        (User.create ~id:user_id ~first_name:"mention_user" ()))
+                        (User.create ~id:user_id ~first_name:"mention_user" ())
+                     )
                    ~offset:0 ~length:0 () ]
          | None ->
              None )
@@ -43,10 +44,10 @@ let run_test env expected =
              (Message.create ~message_id:200 ~date:0 ~photo:(Some [])
                 ~from:(Some (User.create ~id:300 ~first_name:"" ()))
                 ~chat:(Chat.create ~id:500 ~chat_type:Chat.Supergroup ())
-                ())
+                () )
          else None )
        ~chat:(Chat.create ~id:500 ~chat_type:Chat.Supergroup ())
-       ())
+       () )
   = expected
 
 let%test "call try_ban by trusted user to late" =

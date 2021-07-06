@@ -19,7 +19,7 @@ let asset_ban_message message_json =
          method is_admin = false
 
          method state = state
-      end)
+      end )
       (Yojson.Safe.from_string json |> Message.read)
   in
   match actual with
