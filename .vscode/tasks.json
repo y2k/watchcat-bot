@@ -5,6 +5,9 @@
       "label": "build",
       "type": "shell",
       "command": "dune build",
+      "presentation": {
+        "reveal": "silent"
+      },
       "group": {
         "kind": "build",
         "isDefault": true
@@ -14,6 +17,9 @@
     {
       "label": "test",
       "type": "shell",
+      "presentation": {
+        "reveal": "silent"
+      },
       "command": "dune test",
       "problemMatcher": []
     },
@@ -21,7 +27,9 @@
       "label": "run",
       "type": "shell",
       "command": "_build/default/app/main.exe",
-      "args": [ "${workspaceFolder}/_build/data.json" ],
+      "args": [
+        "${workspaceFolder}/_build/data.json"
+      ],
       "dependsOn": [
         "build"
       ],
