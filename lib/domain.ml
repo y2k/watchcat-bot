@@ -46,8 +46,9 @@ let find_user_in_message msg =
       find_user_in_message' msg.entities
 
 let user_to_string {TelegramApi.User.first_name; username; _} =
-  Printf.sprintf "%s%s" first_name
-    (username |> Option.fold ~none:"" ~some:(fun un -> " (@" ^ un ^ ")"))
+  username
+  |> Option.fold ~none:"" ~some:(fun un -> " (@" ^ un ^ ")")
+  |> Printf.sprintf "%s%s" first_name
 
 let add_trusted_user env ({chat= {id= chat_id; _}; message_id; _} as msg) =
   match env#is_admin with
