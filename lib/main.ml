@@ -15,7 +15,7 @@ Mk (struct
   let state_store =
     ref
       (Persistent.restore_from_events Domain.StateEvents.restore
-         Domain.StateEvents.empty_state init_events)
+         Domain.StateEvents.empty_state init_events )
 
   let save_to_disk =
     Persistent.save_to_disk init_events Env.storage_path
@@ -70,7 +70,7 @@ Mk (struct
           | Result.Success members when is_member members ->
               f msg true
           | _ ->
-              f msg false)
+              f msg false )
     | _ ->
         nothing )
     |> Lwt.return
@@ -88,14 +88,14 @@ Mk (struct
           let effs = f env msg in
           let reply_text = Option.bind msg.reply_to_message (fun x -> x.text) in
           Logger.log env !last_json reply_text effs ;
-          effs |> handle_effects msg.chat.id)
+          effs |> handle_effects msg.chat.id )
     in
     Domain.user_commands
     |> List.map (fun (uc : _ Domain.user_command) ->
            { name= uc.name
            ; description= uc.description
            ; enabled= true
-           ; run= wrap uc.run })
+           ; run= wrap uc.run } )
 end)
 
 let run storage_path =

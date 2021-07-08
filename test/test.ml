@@ -94,10 +94,10 @@ let%test "add_trusted_user" =
       func= add_trusted_user
     ; is_admin= true
     ; mention_user_id= Some 200 }
-    [ `UpdateState
+    [ `DeleteMessage 100
+    ; `UpdateState
         [ StateEvents.TrustedUserAdded
-            {chat_id= 500; user_id= 200; name= "mention_user"} ]
-    ; `DeleteMessage 100 ]
+            {chat_id= 500; user_id= 200; name= "mention_user"} ] ]
 
 let%test "remove_trusted_user not admin" =
   run_test {empty_env with func= remove_trusted_user} [`DeleteMessage 100]
@@ -114,5 +114,6 @@ let%test "remove_trusted_user" =
       func= remove_trusted_user
     ; mention_user_id= Some 200
     ; is_admin= true }
-    [ `UpdateState [StateEvents.TrustedUserDeleted {chat_id= 500; user_id= 200}]
-    ; `DeleteMessage 100 ]
+    [ `DeleteMessage 100
+    ; `UpdateState [StateEvents.TrustedUserDeleted {chat_id= 500; user_id= 200}]
+    ]

@@ -50,35 +50,24 @@ let user_to_string {TelegramApi.User.first_name; username; _} =
   |> Option.fold ~none:"" ~some:(fun un -> " (@" ^ un ^ ")")
   |> Printf.sprintf "%s%s" first_name
 
-let add_trusted_user env ({chat= {id= chat_id; _}; message_id; _} as msg) =
-  match env#is_admin with
-  | true -> (
-    match find_user_in_message msg with
-    | Some trusted_user ->
-        let tu_title = user_to_string trusted_user in
-        [ `UpdateState
-            [ StateEvents.TrustedUserAdded
-                {chat_id; user_id= trusted_user.id; name= tu_title} ]
-        ; `DeleteMessage message_id ]
-    | None ->
-        [ `DeleteMessage message_id
-        ; `SendMessage "Пользователь не указан" ] )
-  | false ->
-      [`DeleteMessage message_id]
+let add_trusted_user' ({chat= {id= chat_id; _}; _} as msg) =
+  match find_user_in_message msg with
+  | Some trusted_user ->
+      let tu_title = user_to_string trusted_user in
+      [ `UpdateState
+          [ StateEvents.TrustedUserAdded
+              {chat_id; user_id= trusted_user.id; name= tu_title} ] ]
+  | None ->
+      [`SendMessage "Пользователь не указан"]
 
-let remove_trusted_user env ({chat= {id= chat_id; _}; message_id; _} as msg) =
-  match env#is_admin with
-  | true -> (
-    match find_user_in_message msg with
-    | Some trusted_user ->
-        [ `UpdateState
-            [StateEvents.TrustedUserDeleted {chat_id; user_id= trusted_user.id}]
-        ; `DeleteMessage message_id ]
-    | None ->
-        [ `DeleteMessage message_id
-        ; `SendMessage "Пользователь не указан" ] )
-  | false ->
-      [`DeleteMessage message_id]
+let remove_trusted_user' ({chat= {id= chat_id; _}; _} as msg) =
+  match find_user_in_message msg with
+  | Some trusted_user ->
+      [ `UpdateState
+          [StateEvents.TrustedUserDeleted {chat_id; user_id= trusted_user.id}]
+      ]
+  | None ->
+      [`SendMessage "Пользователь не указан"]
 
 let try_ban env msg =
   let is_spam reply_msg =
@@ -115,6 +104,15 @@ let try_ban env msg =
 type ('env, 'a) user_command =
   {name: string; description: string; run: 'env -> message -> 'a}
 
+let only_admin f env msg = match env#is_admin with true -> f msg | false -> []
+
+let delete_message f msg = `DeleteMessage msg.message_id :: f msg
+
+let add_trusted_user msg = delete_message (only_admin add_trusted_user' msg)
+
+let remove_trusted_user msg =
+  delete_message (only_admin remove_trusted_user' msg)
+
 let user_commands =
   [ { name= "ban"
     ; description= "Забанить пользователя"
@@ -131,4 +129,4 @@ let user_commands =
     ; description=
         "Удалить доверенного пользователя"
     ; run= remove_trusted_user }
-  ; {name= "version"; description= "Версия 0.1"; run= (fun _ _ -> [])} ]
+  ; {name= "version"; description= "Версия 0.2"; run= (fun _ _ -> [])} ]
