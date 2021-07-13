@@ -1,6 +1,5 @@
-(library
- (name test)
- (inline_tests)
+(tests
+ (names test spam_tests)
  (preprocess
   (pps ppx_inline_test ppx_deriving.show))
- (libraries lib))
+ (libraries lib alcotest))

@@ -18,39 +18,41 @@ let empty_env =
   ; is_reply= false }
 
 let run_test env expected =
-  env.func
-    (object
-       method is_admin = env.is_admin
+  let actual =
+    env.func
+      (object
+         method is_admin = env.is_admin
 
-       method state = env.state
-    end )
-    (Message.create ~message_id:100 ~date:env.message_date
-       ~from:(Some (User.create ~id:400 ~first_name:"" ()))
-       ~entities:
-         ( match env.mention_user_id with
-         | Some user_id ->
+         method state = env.state
+      end )
+      (Message.create ~message_id:100 ~date:env.message_date
+         ~from:(Some (User.create ~id:400 ~first_name:"" ()))
+         ~entities:
+           ( match env.mention_user_id with
+           | Some user_id ->
+               Some
+                 [ MessageEntity.create
+                     ~entity_type:
+                       (TextMention
+                          (User.create ~id:user_id ~first_name:"mention_user" ())
+                       )
+                     ~offset:0 ~length:0 () ]
+           | None ->
+               None )
+         ~reply_to:
+           ( if env.is_reply then
              Some
-               [ MessageEntity.create
-                   ~entity_type:
-                     (TextMention
-                        (User.create ~id:user_id ~first_name:"mention_user" ())
-                     )
-                   ~offset:0 ~length:0 () ]
-         | None ->
-             None )
-       ~reply_to:
-         ( if env.is_reply then
-           Some
-             (Message.create ~message_id:200 ~date:0 ~photo:(Some [])
-                ~from:(Some (User.create ~id:300 ~first_name:"" ()))
-                ~chat:(Chat.create ~id:500 ~chat_type:Chat.Supergroup ())
-                () )
-         else None )
-       ~chat:(Chat.create ~id:500 ~chat_type:Chat.Supergroup ())
-       () )
-  = expected
+               (Message.create ~message_id:200 ~date:0 ~photo:(Some [])
+                  ~from:(Some (User.create ~id:300 ~first_name:"" ()))
+                  ~chat:(Chat.create ~id:500 ~chat_type:Chat.Supergroup ())
+                  () )
+           else None )
+         ~chat:(Chat.create ~id:500 ~chat_type:Chat.Supergroup ())
+         () )
+  in
+  Alcotest.(check bool) "" true (actual = expected)
 
-let%test "call try_ban by trusted user to late" =
+let call_try_ban_by_trusted_user_to_late () =
   run_test
     { empty_env with
       func= try_ban
@@ -60,7 +62,7 @@ let%test "call try_ban by trusted user to late" =
             UserMap.singleton {chat_id= 500; user_id= 400} {name= ""} } }
     [`DeleteMessage 100]
 
-let%test "call try_ban by trusted user" =
+let call_try_ban_by_trusted_user () =
   run_test
     { empty_env with
       func= try_ban
@@ -71,24 +73,23 @@ let%test "call try_ban by trusted user" =
             UserMap.singleton {chat_id= 500; user_id= 400} {name= ""} } }
     [`DeleteMessage 200; `KickUser 300; `DeleteMessage 100]
 
-let%test "call try_ban by admin" =
+let call_try_ban_by_admin () =
   run_test
     {empty_env with func= try_ban; is_admin= true; is_reply= true}
     [`DeleteMessage 200; `KickUser 300; `DeleteMessage 100]
 
-let%test "call try_ban with no permission" =
+let call_try_ban_with_no_permission () =
   run_test {empty_env with func= try_ban} [`DeleteMessage 100]
 
-let%test "add_trusted_user not admin" =
+let add_trusted_user_not_admin () =
   run_test {empty_env with func= add_trusted_user} [`DeleteMessage 100]
 
-let%test "add_trusted_user no reply" =
+let add_trusted_user_no_reply () =
   run_test
     {empty_env with func= add_trusted_user; is_admin= true}
-    [ `DeleteMessage 100
-    ; `SendMessage "Пользователь не указан" ]
+    [`DeleteMessage 100; `SendMessage "Пользователь не указан"]
 
-let%test "add_trusted_user" =
+let add_trusted_user () =
   run_test
     { empty_env with
       func= add_trusted_user
@@ -99,16 +100,15 @@ let%test "add_trusted_user" =
         [ StateEvents.TrustedUserAdded
             {chat_id= 500; user_id= 200; name= "mention_user"} ] ]
 
-let%test "remove_trusted_user not admin" =
+let remove_trusted_user_not_admin () =
   run_test {empty_env with func= remove_trusted_user} [`DeleteMessage 100]
 
-let%test "remove_trusted_user no reply" =
+let remove_trusted_user_no_reply () =
   run_test
     {empty_env with func= remove_trusted_user; is_admin= true}
-    [ `DeleteMessage 100
-    ; `SendMessage "Пользователь не указан" ]
+    [`DeleteMessage 100; `SendMessage "Пользователь не указан"]
 
-let%test "remove_trusted_user" =
+let remove_trusted_user () =
   run_test
     { empty_env with
       func= remove_trusted_user
@@ -117,3 +117,24 @@ let%test "remove_trusted_user" =
     [ `DeleteMessage 100
     ; `UpdateState [StateEvents.TrustedUserDeleted {chat_id= 500; user_id= 200}]
     ]
+
+let () =
+  let open Alcotest in
+  run "E2E"
+    [ ( ""
+      , [ test_case "call_try_ban_by_trusted_user_to_late" `Quick
+            call_try_ban_by_trusted_user_to_late
+        ; test_case "call_try_ban_by_trusted_user" `Quick
+            call_try_ban_by_trusted_user
+        ; test_case "call_try_ban_by_admin" `Quick call_try_ban_by_admin
+        ; test_case "call_try_ban_with_no_permission" `Quick
+            call_try_ban_with_no_permission
+        ; test_case "add_trusted_user_not_admin" `Quick
+            add_trusted_user_not_admin
+        ; test_case "add_trusted_user_no_reply" `Quick add_trusted_user_no_reply
+        ; test_case "add_trusted_user" `Quick add_trusted_user
+        ; test_case "remove_trusted_user_not_admin" `Quick
+            remove_trusted_user_not_admin
+        ; test_case "remove_trusted_user_no_reply" `Quick
+            remove_trusted_user_no_reply
+        ; test_case "remove_trusted_user" `Quick remove_trusted_user ] ) ]
