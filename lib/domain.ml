@@ -114,19 +114,14 @@ let remove_trusted_user msg =
   delete_message (only_admin remove_trusted_user' msg)
 
 let user_commands =
-  [ { name= "ban"
-    ; description= "Забанить пользователя"
-    ; run= try_ban }
+  [ {name= "ban"; description= "Забанить пользователя"; run= try_ban}
   ; { name= "baka"
-    ; description=
-        "Забанить пользователя (синоним ban)"
+    ; description= "Забанить пользователя (синоним ban)"
     ; run= try_ban }
   ; { name= "add"
-    ; description=
-        "Добавить доверенного пользователя"
+    ; description= "Добавить доверенного пользователя"
     ; run= add_trusted_user }
   ; { name= "remove"
-    ; description=
-        "Удалить доверенного пользователя"
+    ; description= "Удалить доверенного пользователя"
     ; run= remove_trusted_user }
   ; {name= "version"; description= "Версия 0.2"; run= (fun _ _ -> [])} ]

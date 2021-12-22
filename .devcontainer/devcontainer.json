@@ -1,0 +1,10 @@
+{
+  "name": "OCaml",
+  "context": "..",
+  "dockerFile": "Dev.Dockerfile",
+  "settings": {},
+  "extensions": [
+    "badochov.ocaml-formatter",
+    "ocamllabs.ocaml-platform"
+  ]
+}
